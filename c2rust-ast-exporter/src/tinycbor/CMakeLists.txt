@@ -124,6 +124,7 @@ generate_export_header(tinycbor
 
 # Generate version header
 configure_file(src/tinycbor-version.h.in tinycbor-version.h)
+configure_file(src/cbor.h tinycbor/cbor.h COPYONLY)
 
 # Check for open_memstream and store the result in HAVE_OPEN_MEMSTREAM
 check_symbol_exists(open_memstream stdio.h HAVE_OPEN_MEMSTREAM)
@@ -143,6 +144,7 @@ endif()
 target_include_directories(tinycbor
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
   PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>"
+  PUBLIC "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>/tinycbor"
   PUBLIC "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
@@ -162,7 +164,7 @@ install(
 )
 
 set(PROJECT_LIBRARIES TinyCBOR)
-include(PackageConfig)
+#include(PackageConfig)
 
 if(BUILD_TESTING)
   enable_testing()

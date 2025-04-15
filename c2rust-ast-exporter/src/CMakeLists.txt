@@ -5,43 +5,11 @@ project(ASTExporter)
 # TinyCBOR                                      #
 #################################################
 
-set(TINYCBOR_REPO "https://github.com/intel/tinycbor.git" CACHE STRING "tinycbor git repo URL")
+set(WITH_CBOR2JSON VALUE CACHE BOOL OFF FORCE)
+add_subdirectory(tinycbor)
+include_directories(${CMAKE_BINARY_DIR}/tinycbor)
 
-# v0.6.3 tag, but using the commit hash instead (of the tarball hash) for integrity checks
-# unlike a .tar.gz MD5 hash, this SHA-1 commit hash should stay stable regardless of compression/archiving
-# (GitHub has changed this), and still retains the integrity check
-set(TINYCBOR_TAG "d393c16f3eb30d0c47e6f9d92db62272f0ec4dc7" CACHE STRING "tinycbor git tag/branch/commit hash")
-
-set(TINYCBOR_PREFIX "${CMAKE_BINARY_DIR}/tinycbor" CACHE STRING "tinycbor install prefix")
-
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-    set(MAKE "gmake")
-else()
-    set(MAKE "make")
-endif()
-
-include(ExternalProject)
-ExternalProject_Add(tinycbor_build
-            PREFIX ${TINYCBOR_PREFIX}
-            INSTALL_DIR ${CMAKE_BINARY_DIR}
-            GIT_REPOSITORY ${TINYCBOR_REPO}
-            GIT_TAG ${TINYCBOR_TAG}
-            # the fd redirection here fails when the build run inside Cargo.
-            # patch from upstream:
-            # https://github.com/intel/tinycbor/commit/6176e0a28d7c5ef3a5e9cbd02521999c412de72c
-            PATCH_COMMAND patch --forward -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/tinycbor_fix_build.patch || true
-            CONFIGURE_COMMAND ${MAKE} .config && cat ${CMAKE_CURRENT_SOURCE_DIR}/tinycbor.config >> .config
-            BUILD_COMMAND ${MAKE} --quiet prefix=<INSTALL_DIR> CFLAGS=-fPIC
-            INSTALL_COMMAND ${MAKE} --quiet prefix=<INSTALL_DIR> install
-            BUILD_IN_SOURCE 1
-            BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/lib/libtinycbor.a
-)
-
-include_directories(${CMAKE_BINARY_DIR}/include)
-
-add_library(tinycbor STATIC IMPORTED)
-set_target_properties(tinycbor PROPERTIES IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/lib/libtinycbor.a)
-add_dependencies(tinycbor tinycbor_build)
+#################################################
 
 set(AST_EXPORTER_SRCS
   AstExporter.cpp
@@ -115,3 +83,7 @@ target_link_libraries(clangAstExporter PRIVATE
   clangASTMatchers
   tinycbor
   )
+
+# Make sure the linker can see the locally-build library.
+target_link_directories(clangAstExporter PUBLIC ${CMAKE_BINARY_DIR}/tinycbor)
+target_link_directories(c2rust-ast-exporter PUBLIC ${CMAKE_BINARY_DIR}/tinycbor)
